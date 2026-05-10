@@ -36,10 +36,17 @@ void TrumaiNetBoxAppHeater::create_update_data(StatusFrame *response, u_int8_t *
   response->heaterResponse.target_temp_room = this->update_status_.target_temp_room;
   response->heaterResponse.heating_mode = this->update_status_.heating_mode;
   response->heaterResponse.target_temp_water = this->update_status_.target_temp_water;
-  response->heaterResponse.energy_mix_a = this->update_status_.energy_mix_a;
-  response->heaterResponse.energy_mix_b = this->update_status_.energy_mix_a;
   response->heaterResponse.el_power_level_a = this->update_status_.el_power_level_a;
   response->heaterResponse.el_power_level_b = this->update_status_.el_power_level_a;
+
+  // Ensure energy_mix is never NONE when a temperature is set — CP Plus rejects with error 0x01 otherwise.
+  EnergyMix effective_mix = this->update_status_.energy_mix_a;
+  if (effective_mix == EnergyMix::ENERGY_MIX_NONE &&
+      this->update_status_.target_temp_room != TargetTemp::TARGET_TEMP_OFF) {
+    effective_mix = EnergyMix::ENERGY_MIX_GAS;
+  }
+  response->heaterResponse.energy_mix_a = effective_mix;
+  response->heaterResponse.energy_mix_b = effective_mix;
 
   status_frame_calculate_checksum(response);
   (*response_len) = sizeof(StatusFrameHeader) + sizeof(StatusFrameHeaterResponse);
